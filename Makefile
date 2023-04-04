@@ -9,5 +9,3 @@ setup:
 	brew install coreutils
 cluster:
 	./scripts/kind-with-registry.sh
-import:
-	./scripts/import-labs.sh
