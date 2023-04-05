@@ -59,3 +59,6 @@ EOF
 # kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.7.0/aio/deploy/recommended.yaml
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
 # istioctl install --set profile=demo -y
+
+### update providers registry 
+sed "3 s/kindctx/$(/opt/homebrew/bin/kubectx | grep kind)/g" infrastructure/providers.tf | tee providers.tf && mv providers.tf infrastructure/providers.tf
