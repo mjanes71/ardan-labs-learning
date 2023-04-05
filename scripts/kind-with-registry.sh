@@ -61,4 +61,4 @@ kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main
 # istioctl install --set profile=demo -y
 
 ### update providers registry 
-sed "3 s/kindctx/$(/opt/homebrew/bin/kubectx | grep kind)/g" infrastructure/providers.tf | tee providers.tf && mv providers.tf infrastructure/providers.tf
+sed "3 s/kind-kind/$(/opt/homebrew/bin/kubectx | grep kind)/g" infrastructure/providers.tf | tee providers.tf && mv providers.tf infrastructure/providers.tf
