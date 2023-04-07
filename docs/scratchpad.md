@@ -28,3 +28,8 @@ go env
 ## Module 3
 - A sidecar is kinda like a pod that runs alongside another pod. So if your service needs a metrics pod, but only when the sevice pod is running, you can run the metrics pod as a sidecar.
 - Zipkin is a tracing sidecar
+
+## Module 4
+- not sure what I think about subpackages not importing each other. On one hand, I see that, but it feels like the level of organization he is suggesting is level 10/10 and I don't know how you could come up with a working design that would work for every project.
+- Interesting to pick directory names that keep things in order from top to bottom
+- I absolutely HATE having dockerfiles live so far away from the go they are trying to build
