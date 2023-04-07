@@ -24,3 +24,7 @@ go env
 - Go, when choosing version of downstream dependencies, may not always choose the latest and greatest versions of a downstream dependency. This could cause a problem if another dependency requires a different version. The GO algo will choose the lowest version that will work for everything
 - If you want to use the latest and greatest versions of things all the time, you can do `go get -u -t -v ./...` This walks the project and gets the latest greatest of every dependency. Then you tidy and vendor.
 - If you pass a version with a dependency, you can maintain two different versions of that source code in your mod
+
+## Module 3
+- A sidecar is kinda like a pod that runs alongside another pod. So if your service needs a metrics pod, but only when the sevice pod is running, you can run the metrics pod as a sidecar.
+- Zipkin is a tracing sidecar
