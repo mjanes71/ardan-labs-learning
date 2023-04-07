@@ -33,3 +33,5 @@ go env
 - not sure what I think about subpackages not importing each other. On one hand, I see that, but it feels like the level of organization he is suggesting is level 10/10 and I don't know how you could come up with a working design that would work for every project.
 - Interesting to pick directory names that keep things in order from top to bottom
 - I absolutely HATE having dockerfiles live so far away from the go they are trying to build
+- Being able to understand something is more important than it being easy to do
+- validate signal to noise ratio on logs, ideally the logs in dev are the same as the logs in prod
