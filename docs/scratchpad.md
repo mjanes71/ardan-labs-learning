@@ -35,3 +35,4 @@ go env
 - I absolutely HATE having dockerfiles live so far away from the go they are trying to build
 - Being able to understand something is more important than it being easy to do
 - validate signal to noise ratio on logs, ideally the logs in dev are the same as the logs in prod
+- like the idea of everything having a default setting that makes things work at least in dev
