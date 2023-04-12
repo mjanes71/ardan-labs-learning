@@ -2,7 +2,10 @@
 
 - the [repo]('https://github.com/ardanlabs/service') for the ultimate go: service with k8 course
 
-## Module 2
+## Module 1
+- name your mod file starting with your repo
+- vs code can be confused if you don't have a go mod (might open it in cantral gopath mode). Now that we have mods, the gopath goes to the level of the go.mod
+- cmd + shift + p or reload the window to reload the language server
 - At a systems level, y'all need to center on "what is a project". For this teacher, a project represents a repo.
 - One project can contain multiple binaries. I think that's gonna be why we need multiple go mods per project/repo.
 - A project will have conventions that everyone needs to conform to, even if they don't love it.
@@ -24,7 +27,10 @@ go env
 - Go, when choosing version of downstream dependencies, may not always choose the latest and greatest versions of a downstream dependency. This could cause a problem if another dependency requires a different version. The GO algo will choose the lowest version that will work for everything
 - If you want to use the latest and greatest versions of things all the time, you can do `go get -u -t -v ./...` This walks the project and gets the latest greatest of every dependency. Then you tidy and vendor.
 - If you pass a version with a dependency, you can maintain two different versions of that source code in your mod
-
-## Module 3
 - A sidecar is kinda like a pod that runs alongside another pod. So if your service needs a metrics pod, but only when the sevice pod is running, you can run the metrics pod as a sidecar.
 - Zipkin is a tracing sidecar
+- Deploy first mentality = getting just enough code to get a service that runs
+- Understand where you fit in the knowledge spectrum of your project  (if you're above average, write and design to the middle, if stuff is too clever, other people with less knowledge can't maintain it)
+- you always want to have no more go processes running than you have machines/cores
+- ?? What do y'all think about putting stuff in a run function? Can someone explain this to me better than Bill? 
+
