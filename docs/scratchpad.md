@@ -31,6 +31,27 @@ go env
 - Zipkin is a tracing sidecar
 - Deploy first mentality = getting just enough code to get a service that runs
 - Understand where you fit in the knowledge spectrum of your project  (if you're above average, write and design to the middle, if stuff is too clever, other people with less knowledge can't maintain it)
-- you always want to have no more go processes running than you have machines/cores
+- you always want to have no more go processors running than you have machines/cores
 - ?? What do y'all think about putting stuff in a run function? Can someone explain this to me better than Bill? 
 
+## Module 2
+- think about what hat you're wearing when you write code. devops vs dev. what if some day you aren't both?
+- sidecars: separate metrics or other intellegence from the main service (devops could write sidecars and be in charge of where that stuff goes to (like honeycomb))
+- kubectl apply is a command where k8 cluster is taking your instruction and figuring out how to make it work (asynchronous, won't happen immediately)
+- deployment defines what the pod needs to look like
+- service defines the networking side of things
+- some go dependencies might use c libraries by default, but if you disable it, they have a go native workaround. bill likes to disable cgo in his test commands to make sure the docker build (with cgo disabled) is gonna run the same way things are locally
+- i learned from [this article](https://levelup.gitconnected.com/a-better-way-than-ldflags-to-add-a-build-version-to-your-go-binaries-2258ce419d2d) that you can use go embed and go generate instead of ldflags
+- ??? thoughts on addgroup and adduser in dockerfiles? being explicit about access?
+- for kustomization setup, the kustomization.yaml in base points to the yaml in base. the kustomization.yaml in dev/sales points to the kustomization.yaml in base AND the patch its trying to patch in
+- the patch metadata needs to match the base yaml matadata so kustomize understands what yaml its trying to patch
+- the go runtime is not k8 aware, so if you are cpu restricting in your yaml spec, you need to also use the maxprocs library to help go be aware of the k8 configs
+- Bills rules about configs:
+1. only main.go should be referencing configs
+2. all configs should have a dev default with few exceptions (like keys)
+3. the config service should support --help
+- ??? Thoughts on using the ardan labs conf pkg?
+- the logfmt tool is some next level $h!t. i wonder when he decides its time to do this stuff. or did he just steal it from someone else.
+- i feel like i'd have to have 800 years of go experience to get on Bill's level
+- a mux is a piece of code / router that accepts requests, and if it has a matching route, it will route the request to the right handler. watchout on user the defaultmuxlibrary, its a security risk
+- think of goroutines in a parent-child relationship. parent goroutines should not terminate until its sure the child routines have terminated. one approach is to have a pkg with a waitgroup that is called by the top level parent to monitor shutdown of children

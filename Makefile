@@ -1,62 +1,99 @@
+# Other commands to install.
+# go install github.com/divan/expvarmon@latest
+
 run:
-	go run app/services/sales-api/main.go
+	go run app/services/sales-api/main.go | go run app/tooling/logfmt/main.go 
+
+run-help:
+	go run app/services/sales-api/main.go --help
 
 tidy:
 	go mod tidy
+	go mod vendor
 
-# .PHONY: import
-# setup:
-# 	brew install tilt
-# 	brew install kind
-# 	brew install kubectl
-# 	brew install kubectx
-# 	brew install kustomize
-# 	brew install k9s
-# 	brew install txn2/tap/kubefwd
-# 	brew install entr
-# 	brew install coreutils
-# 	brew install kustomize
-# cluster:
-# 	./scripts/kind-with-registry.sh
+metrics-local:
+	expvarmon -ports=":4000" -vars="build,requests,goroutines,errors,panics,mem:memstats.Alloc"
 
-# VERSION := 1.0
+metrics-view:
+	expvarmon -ports="sales-service.sales-system.svc.cluster.local:4000" -vars="build,requests,goroutines,errors,panics,mem:memstats.Alloc"
 
-# all: service
+# ==============================================================================
+# Building containers
 
-# service:
-# 	docker build \
-# 		-f zarf/docker/Dockerfile \
-# 		-t service-amd64:$(VERSION) \
-# 		--build-arg BUILD_REF=$(VERSION) \
-# 		--build-arg BUILD_DATE=`date -u +"%Y-%m-%dT%H:%M:%SZ"` \
-# 		.
+# $(shell git rev-parse --short HEAD)
+VERSION := 1.0
 
-# KIND_CLUSTER := ardan-starter-cluster
+all: sales
 
-# kind-up:
-# 	kind create cluster \
-# 		--image kindest/node:v1.26.3@sha256:61b92f38dff6ccc29969e7aa154d34e38b89443af1a2c14e6cfbd2df6419c66f \
-# 		--name $(KIND_CLUSTER) \
-# 		--config zarf/k8s/kind/kind-config.yaml
-# 	kubectl config set-context --current --namespace=service-system
+sales:
+	docker build \
+		-f zarf/docker/dockerfile.sales-api \
+		-t sales-api:$(VERSION) \
+		--build-arg BUILD_REF=$(VERSION) \
+		--build-arg BUILD_DATE=`date -u +"%Y-%m-%dT%H:%M:%SZ"` \
+		.
 
-# kind-down:
-# 	kind delete cluster --name $(KIND_CLUSTER)
+# ==============================================================================
+# Running from within k8s/kind
 
-# kind-load:
-# 	kind load docker-image service-amd64:$(VERSION) --name $(KIND_CLUSTER)
+GOLANG       := golang:1.19
+ALPINE       := alpine:3.17
+KIND         := kindest/node:v1.25.3
+POSTGRES     := postgres:15-alpine
+VAULT        := hashicorp/vault:1.12
+ZIPKIN       := openzipkin/zipkin:2.23
+TELEPRESENCE := docker.io/datawire/tel2:2.10.4
 
-# kind-apply:
-# 	kustomize build zarf/k8s/kind/service-pod | kubectl apply -f -
+KIND_CLUSTER := ardan-starter-cluster
 
-# kind-status:
-# 	kubectl get nodes -o wide
-# 	kubectl get svc -o wide
-# 	kubectl get pods -o wide --watch --all-namespaces
 
-# kind-restart:
-# 	kubectl rollout restart deployment service-pod --namespace=service-system
+dev-tel:
+	kind load docker-image $(TELEPRESENCE) --name $(KIND_CLUSTER)
+	telepresence --context=kind-$(KIND_CLUSTER) helm install
+	telepresence --context=kind-$(KIND_CLUSTER) connect
 
-# kind-update: all kind-load kind-restart
+dev-up:
+	kind create cluster \
+		--image kindest/node:v1.25.3@sha256:f52781bc0d7a19fb6c405c2af83abfeb311f130707a0e219175677e366cc45d1 \
+		--name $(KIND_CLUSTER) \
+		--config zarf/k8s/dev/kind-config.yaml
+	kubectl wait --timeout=120s --namespace=local-path-storage --for=condition=Available deployment/local-path-provisioner
 
-# kind-update-apply: all kind-load kind-apply
+dev-down:
+	telepresence quit -s
+	kind delete cluster --name $(KIND_CLUSTER)
+
+dev-status:
+	kubectl get nodes -o wide
+	kubectl get svc -o wide
+	kubectl get pods -o wide --watch --all-namespaces
+
+dev-load:
+	kind load docker-image sales-api:$(VERSION) --name $(KIND_CLUSTER)
+
+dev-apply:
+	kustomize build zarf/k8s/dev/sales | kubectl apply -f -
+	kubectl wait --timeout=120s --namespace=sales-system --for=condition=Available deployment/sales
+
+dev-restart:
+	kubectl rollout restart deployment sales --namespace=sales-system
+
+dev-logs: # its the -f here that makes this persist in your terminal until you ctrl+c
+	kubectl logs --namespace=sales-system -l app=sales --all-containers=true -f --tail=100 --max-log-requests=6 | go run app/tooling/logfmt/main.go -service=SALES-API
+dev-describe:
+	kubectl describe nodes
+	kubectl describe svc
+
+dev-describe-deployment:
+	kubectl describe deployment --namespace=sales-system sales
+
+dev-describe-sales:
+	kubectl describe pod --namespace=sales-system -l app=sales
+
+# build new image, load to kind registry, rollout restart the sales pod
+# can do this if not making changes to the yaml
+dev-update: all dev-load dev-restart
+
+# build new image, load to kind registry, make a new deployment config with
+# kustomize patch, apply the new yaml, which auto-restarts the pod
+dev-update-apply: all dev-load dev-apply
