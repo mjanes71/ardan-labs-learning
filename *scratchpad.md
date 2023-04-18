@@ -55,3 +55,135 @@ go env
 - i feel like i'd have to have 800 years of go experience to get on Bill's level
 - a mux is a piece of code / router that accepts requests, and if it has a matching route, it will route the request to the right handler. watchout on user the defaultmuxlibrary, its a security risk
 - think of goroutines in a parent-child relationship. parent goroutines should not terminate until its sure the child routines have terminated. one approach is to have a pkg with a waitgroup that is called by the top level parent to monitor shutdown of children
+
+## Module 3
+- a goroutine is just a function with go in front of it. this tells go that you want to run that bit of code asynchronously with any other goroutines in the code. ie:
+```go
+// Prints numbers from 1-3 along with the passed string
+func foo(s string) {
+    for i := 1; i <= 3; i++ {
+        time.Sleep(100 * time.Millisecond)
+        fmt.Println(s, ": ", i)
+    }
+}
+
+func main() {
+    
+    // Starting two goroutines
+    go foo("1st goroutine")
+    go foo("2nd goroutine")
+
+    // Wait for goroutines to finish before main goroutine ends
+    time.Sleep(time.Second)
+    fmt.Println("Main goroutine finished")
+}
+```
+- all go routines are running within the context of the main func. if you shutdown main without accounting for any running goroutines, you risk orphaning a routine
+- load-shedding using http package is how you make sure stuff doesn't get orphaned/shutdown before its time
+- !!! DEFININTELY gonna steal the convention of adding a comments section at the top under imports where todos can go instead of having them spread out all over the doc where i'm likely to miss them. especially if something us under active dev. could even have the linter check to see if there are things left in this and alert you probably.
+- Bill thinks the backlog is where things go to die. I rather enjoy grooming the backlog.
+- synchronizing access to shared state is like waiting in a line to place an order for coffee. the person at the front of the line as access to the state currently. atomic instructions and mutexes
+- when you get to the front of the line, you're in orchestration mode
+- channels are used to help a goroutine communicate back to the main func that its still running (this is the arrow syntax)
+- use a channel to monitor signals (singal if ther is an error with your api, or a shutdown for example)
+- ??? pattern of passing config object to function call, wonder which people like better
+```go 
+
+// option 1
+cfgMux := handlers.APIMuxConfig{
+		Shutdown: shutdown,
+		Log: log,
+	}
+apiMux := handlers.APIMux(cfgMux)
+
+
+//option 2
+apiMux := handlers.APIMux(handlers.APIMuxConfig{
+		Shutdown: shutdown,
+		Log: log,
+	})
+
+// applies to cockroach svc like:
+// option 1
+cnxInfo := cockroachconnect.CnxStrConfig{
+			Driver: "postgres",
+			User: os.Getenv("CR_USER"),
+			Password: os.Getenv("CR_PASSWORD"),
+			Host: os.Getenv("CR_HOST"),
+			Port: "26257",
+			DbName: os.Getenv("CR_DB"),
+			SSLMode: "verify-full",
+			SSLRootCert: os.Getenv("CR_ROOT_CERT"),
+			AppName: "schema-migration",
+		}
+dbConnection, err = cockroachconnect.New(false, &cnxInfo)
+if err != nil {
+    log.Fatalf("Error connecting to database: %q", err)
+}
+
+// or option 2
+dbConnection, err = cockroachconnect.New(false, cockroachconnect.CnxStrConfig{
+			Driver: "postgres",
+			User: os.Getenv("CR_USER"),
+			Password: os.Getenv("CR_PASSWORD"),
+			Host: os.Getenv("CR_HOST"),
+			Port: "26257",
+			DbName: os.Getenv("CR_DB"),
+			SSLMode: "verify-full",
+			SSLRootCert: os.Getenv("CR_ROOT_CERT"),
+			AppName: "schema-migration",
+		})
+if err != nil {
+    log.Fatalf("Error connecting to database: %q", err)
+}
+
+```
+
+- ctx should be the first arg in any function that has i/o or a role in i/o
+- ?? wonder if I could have used his "write a mux without writing a mix" fix to extend the the datadog mocks
+- middleware functions are designed to take something and wrap it with something else. ie: take some existing function and wrap it with logging, or otel, or something else
+- ??? wondering how common it is to reference go types you created in other files in the same pkg like this:
+```go
+package web
+
+// Middleware is a function designed to run some code before and/or after
+// another Handler. It is designed to remove boilerplate or other concerns not
+// direct to any given Handler.
+type Middleware func(Handler) Handler
+```
+- every directory is a pkg, every pkg is an api. one file named after the package name so its clear what the pkg does
+- utils, common, helpers, models (you end up having a fragile codebase sometimes from things like this). just be careful how much stuff is importing that pkg, more imports = more fragility
+- ???trying to understand closures (when an anon function closes over a value)
+```go
+// Logger writes information about the request to the logs.
+func Logger(log *zap.SugaredLogger) web.Middleware {
+	m := func(handler web.Handler) web.Handler {
+		h := func(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+			log.Infow("request started", "method", r.Method, "path", r.URL.Path,
+				"remoteaddr", r.RemoteAddr)
+
+			err := handler(ctx, w, r)
+
+			log.Infow("request completed", "method", r.Method, "path", r.URL.Path,
+				"remoteaddr", r.RemoteAddr)
+
+			return err
+		}
+
+		return h
+	}
+
+	return m
+}
+```
+
+- i think working with Bill would be awesome and so frustrating. it feels like he has exceptions to every rule, but his rules are so hard and numerous
+- ??? what strategies is anyone employing to get to Bill's level of go understanding/expertise? It's way too much to process this entire course and implement it all in your own day-to-day. I'm inclined to take one thing, like logging, and do a deep dive on it, and then develop my own opinions on it and start implementing them as I write go.
+- errors should only be handled once
+- once an error is handled, it should be done
+- errors should probably be handled at the highest layers (business, or app in this project)
+- error is an interface. when we say `if err != nil` what we're asking is, has a concrete value been stored in the error interface you returned? If something has been stored there, it indicates an error value that needs to be handled.
+- Bill rocking back and forth from side to side at 2x makes me want to vom
+- the lower layers should not shut down/panic
+- creating structs and using pointer receivers to build out their functionality protects from fraud. Bill explains it decently well.
+- when you've been listening to bill on 2x and take it down to 1x, it feels like you're living in slowmo
