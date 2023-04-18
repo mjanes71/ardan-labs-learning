@@ -5,12 +5,13 @@ go 1.20
 require (
 	github.com/ardanlabs/conf/v3 v3.1.5
 	github.com/ardanlabs/service v0.0.0-20230412175053-27ccb32fe858
+	github.com/dimfeld/httptreemux/v5 v5.5.0
+	github.com/google/uuid v1.3.0
 	go.uber.org/automaxprocs v1.5.2
 	go.uber.org/zap v1.24.0
 )
 
 require (
-	github.com/dimfeld/httptreemux/v5 v5.5.0 // indirect
 	github.com/felixge/httpsnoop v1.0.3 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect

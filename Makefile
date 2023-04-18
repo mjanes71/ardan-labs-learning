@@ -1,6 +1,9 @@
 # Other commands to install.
 # go install github.com/divan/expvarmon@latest
 
+# http://sales-service.sales-system.svc.cluster.local:4000/debug/pprof/
+# http://sales-service.sales-system.svc.cluster.local:3000/status
+
 run:
 	go run app/services/sales-api/main.go | go run app/tooling/logfmt/main.go 
 
@@ -42,7 +45,7 @@ KIND         := kindest/node:v1.25.3
 POSTGRES     := postgres:15-alpine
 VAULT        := hashicorp/vault:1.12
 ZIPKIN       := openzipkin/zipkin:2.23
-TELEPRESENCE := docker.io/datawire/tel2:2.10.4
+TELEPRESENCE := datawire/tel2:2.12.1
 
 KIND_CLUSTER := ardan-starter-cluster
 
@@ -58,7 +61,9 @@ dev-up:
 		--name $(KIND_CLUSTER) \
 		--config zarf/k8s/dev/kind-config.yaml
 	kubectl wait --timeout=120s --namespace=local-path-storage --for=condition=Available deployment/local-path-provisioner
-
+	kind load docker-image $(TELEPRESENCE) --name $(KIND_CLUSTER)
+	telepresence --context=kind-$(KIND_CLUSTER) helm install
+	telepresence --context=kind-$(KIND_CLUSTER) connect
 dev-down:
 	telepresence quit -s
 	kind delete cluster --name $(KIND_CLUSTER)

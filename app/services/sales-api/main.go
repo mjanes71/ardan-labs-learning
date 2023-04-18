@@ -9,14 +9,20 @@ import (
 	"syscall"
 	"time"
 	"net/http"
+	"context"
 
 	"github.com/ardanlabs/conf/v3"
 	"github.com/ardanlabs/service/foundation/logger"
 	"go.uber.org/automaxprocs/maxprocs"
 	"go.uber.org/zap"
 	"github.com/ardanlabs/service/business/web/v1/debug"
+	"github.com/mjanes71/ardan-labs-learning/app/services/sales-api/handlers"
+	
 )
-
+/*
+	This is where we put project todos
+	Need to figure out timeouts for http service
+*/
 var build = "develop"
 func main() {
 	log, err := logger.New("SALES-API")
@@ -95,9 +101,64 @@ func run(log *zap.SugaredLogger) error {
 	}()
 
 	// =========================================================================
+	// Start API Service
 
+	log.Infow("startup", "status", "initializing V1 API support")
 	shutdown := make(chan os.Signal, 1)
+	// realy incoming signals (sigint and sigterm) to the shutdown channel
 	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
-	<-shutdown
+	
+	apiMux := handlers.APIMux(handlers.APIMuxConfig{
+		Shutdown: shutdown,
+		Log: log,
+	})
+	api := http.Server{
+		Addr:         cfg.Web.APIHost,
+		Handler:      apiMux,
+		ReadTimeout:  cfg.Web.ReadTimeout,
+		WriteTimeout: cfg.Web.WriteTimeout,
+		IdleTimeout:  cfg.Web.IdleTimeout,
+		ErrorLog:     zap.NewStdLog(log.Desugar()),
+	}
+
+	// open a channel called serverErrors. its expecting 1 error to be sent to it
+	serverErrors := make(chan error, 1)
+
+	go func() {
+		log.Infow("startup", "status", "api router started", "host", api.Addr)
+		// send the error from api.ListenandServe to the serverErrors channel
+		// this would catch a server error
+		serverErrors <- api.ListenAndServe()
+	}()
+
+	// =========================================================================
+	// Shutdown
+
+	select {
+		// this is not the ideal case
+	case err := <-serverErrors:
+		return fmt.Errorf("server error: %w", err)
+
+		//this is the ideal case
+	case sig := <-shutdown:
+		log.Infow("shutdown", "status", "shutdown started", "signal", sig)
+		defer log.Infow("shutdown", "status", "shutdown complete", "signal", sig)
+
+		// ctx will be passed to the 'blocking call' (shutdown below) to give instruction
+		// on how long to wait to timeout
+		ctx, cancel := context.WithTimeout(context.Background(), cfg.Web.ShutdownTimeout)
+		defer cancel() // bill bets that if you don't have a defer cancel, you're probably messing up
+
+		// Shutdown gracefully shuts down the server without interrupting any active connections. 
+		// Shutdown works by first closing all open listeners, then closing all idle connections, 
+		// and then waiting indefinitely for connections to return to idle and then shut down. 
+		// If the provided context expires before the shutdown is complete, Shutdown returns the 
+		// context's error, otherwise it returns any error returned from closing the Server's underlying Listener(s).
+		if err := api.Shutdown(ctx); err != nil {
+			// this part only gets executed if you reach the timeout limit defined in ctx
+			api.Close()
+			return fmt.Errorf("could not stop server gracefully: %w", err)
+		}
+	}
 	return nil
 }
